@@ -1,0 +1,127 @@
+import { useState } from "react";
+import Navigation from "@/components/Navigation";
+import Home from "@/pages/Home";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import { CartSidebar, CartItem } from "@/components/CartSidebar";
+import AgeVerification from "@/components/AgeVerification";
+import CheckoutDialog from "@/components/CheckoutDialog";
+import { useToast } from "@/hooks/use-toast";
+
+const Index = () => {
+  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState("home");
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
+
+  const productSizes = [
+    { size: "5 oz", price: 10 },
+    { size: "8 oz", price: 18 },
+    { size: "16 oz", price: 20 },
+    { size: "32 oz", price: 40 },
+  ];
+
+  const addToCart = (productName: string, selectedSize: string, setSize: (val: string) => void) => {
+    if (!selectedSize) {
+      toast({
+        title: "Please select a size",
+        description: "Choose a size before adding to cart",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const sizeData = productSizes.find(s => s.size === selectedSize);
+    if (!sizeData) return;
+
+    const itemId = `${productName}-${selectedSize}`;
+    const existingItem = cartItems.find(item => item.id === itemId);
+
+    if (existingItem) {
+      setCartItems(cartItems.map(item =>
+        item.id === itemId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCartItems([...cartItems, {
+        id: itemId,
+        name: productName,
+        size: selectedSize,
+        price: sizeData.price,
+        quantity: 1,
+      }]);
+    }
+
+    toast({
+      title: "Added to cart!",
+      description: `${productName} (${selectedSize})`,
+    });
+
+    setSize("");
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
+    toast({
+      title: "Removed from cart",
+      description: "Item has been removed",
+    });
+  };
+
+  const handleCheckout = () => {
+    setIsCheckoutDialogOpen(true);
+  };
+
+  const proceedToCheckout = () => {
+    setIsCheckoutDialogOpen(false);
+    window.open("https://square.link/u/ehoH4jNJ", "_blank");
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case "home":
+        return <Home onAddToCart={addToCart} />;
+      case "about":
+        return <About />;
+      case "contact":
+        return <Contact />;
+      default:
+        return <Home onAddToCart={addToCart} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <AgeVerification />
+      
+      <Navigation 
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+        onCartClick={() => setIsCartOpen(true)}
+      />
+
+      <CartSidebar
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        onRemoveItem={removeFromCart}
+        onCheckout={handleCheckout}
+      />
+
+      <CheckoutDialog
+        isOpen={isCheckoutDialogOpen}
+        onClose={() => setIsCheckoutDialogOpen(false)}
+        onProceedToCheckout={proceedToCheckout}
+      />
+
+      <main className="animate-in fade-in duration-500">
+        {renderPage()}
+      </main>
+    </div>
+  );
+};
+
+export default Index;
